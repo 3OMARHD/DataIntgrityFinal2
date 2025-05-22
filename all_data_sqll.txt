@@ -1,0 +1,369 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: May 21, 2025 at 05:53 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+--
+-- Database: secure_auth_db1
+--
+CREATE DATABASE IF NOT EXISTS secure_auth_db1 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE secure_auth_db1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table admin
+--
+
+CREATE TABLE admin (
+  id int(11) NOT NULL,
+  username varchar(50) NOT NULL,
+  password_hash varchar(512) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table admin_activity
+--
+
+CREATE TABLE admin_activity (
+  id int(11) NOT NULL,
+  admin_id int(11) NOT NULL,
+  action varchar(100) NOT NULL,
+  ip_address varchar(100) DEFAULT NULL,
+  timestamp datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table document
+--
+
+CREATE TABLE document (
+  id int(11) NOT NULL,
+  user_id int(11) NOT NULL,
+  filename varchar(255) NOT NULL,
+  file_hash varchar(64) NOT NULL,
+  encrypted_data longblob NOT NULL,
+  file_size int(11) NOT NULL,
+  encryption_status varchar(20) DEFAULT NULL,
+  created_at datetime DEFAULT NULL,
+  aes_key varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table document_activity
+--
+
+CREATE TABLE document_activity (
+  id int(11) NOT NULL,
+  document_id int(11) NOT NULL,
+  user_id int(11) NOT NULL,
+  action varchar(50) NOT NULL,
+  ip_address varchar(100) DEFAULT NULL,
+  timestamp datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table login_log
+--
+
+CREATE TABLE login_log (
+  id int(11) NOT NULL,
+  user_id int(11) DEFAULT NULL,
+  email varchar(255) DEFAULT NULL,
+  username varchar(50) DEFAULT NULL,
+  role enum('user','admin') DEFAULT NULL,
+  status varchar(50) DEFAULT NULL,
+  ip_address varchar(50) DEFAULT NULL,
+  country varchar(100) DEFAULT NULL,
+  timestamp datetime DEFAULT NULL,
+  session_duration int(11) DEFAULT NULL,
+  admin_id int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table notification
+--
+
+CREATE TABLE notification (
+  id int(11) NOT NULL,
+  type varchar(50) NOT NULL,
+  message text NOT NULL,
+  user_id int(11) DEFAULT NULL,
+  ip_address varchar(100) DEFAULT NULL,
+  timestamp datetime DEFAULT NULL,
+  is_read tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table role
+--
+
+CREATE TABLE role (
+  id int(11) NOT NULL,
+  role_name varchar(50) NOT NULL,
+  description varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table user
+--
+
+CREATE TABLE user (
+  id int(11) NOT NULL,
+  username varchar(150) NOT NULL,
+  email varchar(150) NOT NULL,
+  password varchar(150) DEFAULT NULL,
+  auth_method varchar(20) DEFAULT NULL,
+  github_id varchar(200) DEFAULT NULL,
+  created_at datetime DEFAULT NULL,
+  two_factor_secret varchar(100) DEFAULT NULL,
+  is_2fa_enabled tinyint(1) DEFAULT 0,
+  is_admin_upload_account tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table user_role
+--
+
+CREATE TABLE user_role (
+  id int(11) NOT NULL,
+  user_id int(11) NOT NULL,
+  role_id int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table admin
+--
+ALTER TABLE admin
+  ADD PRIMARY KEY (id),
+  ADD UNIQUE KEY username (username);
+
+--
+-- Indexes for table admin_activity
+--
+ALTER TABLE admin_activity
+  ADD PRIMARY KEY (id),
+  ADD KEY admin_id (admin_id);
+
+--
+-- Indexes for table document
+--
+ALTER TABLE document
+  ADD PRIMARY KEY (id),
+  ADD KEY user_id (user_id);
+
+--
+-- Indexes for table document_activity
+--
+ALTER TABLE document_activity
+  ADD PRIMARY KEY (id),
+  ADD KEY document_id (document_id),
+  ADD KEY user_id (user_id);
+
+--
+-- Indexes for table login_log
+--
+ALTER TABLE login_log
+  ADD PRIMARY KEY (id),
+  ADD KEY user_id (user_id),
+  ADD KEY login_log_ibfk_2 (admin_id);
+
+--
+-- Indexes for table notification
+--
+ALTER TABLE notification
+  ADD PRIMARY KEY (id),
+  ADD KEY user_id (user_id);
+
+--
+-- Indexes for table role
+--
+ALTER TABLE role
+  ADD PRIMARY KEY (id),
+  ADD UNIQUE KEY role_name (role_name);
+
+--
+-- Indexes for table user
+--
+ALTER TABLE user
+  ADD PRIMARY KEY (id),
+  ADD UNIQUE KEY username (username),
+  ADD UNIQUE KEY email (email);
+
+--
+-- Indexes for table user_role
+--
+ALTER TABLE user_role
+  ADD PRIMARY KEY (id),
+  ADD KEY user_id (user_id),
+  ADD KEY role_id (role_id);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table admin
+--
+ALTER TABLE admin
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table admin_activity
+--
+ALTER TABLE admin_activity
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table document
+--
+ALTER TABLE document
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table document_activity
+--
+ALTER TABLE document_activity
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table login_log
+--
+ALTER TABLE login_log
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table notification
+--
+ALTER TABLE notification
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table role
+--
+ALTER TABLE role
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table user
+--
+ALTER TABLE user
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table user_role
+--
+ALTER TABLE user_role
+  MODIFY id int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table admin_activity
+--
+ALTER TABLE admin_activity
+  ADD CONSTRAINT admin_activity_ibfk_1 FOREIGN KEY (admin_id) REFERENCES admin (id);
+
+--
+-- Constraints for table document
+--
+ALTER TABLE document
+  ADD CONSTRAINT document_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id);
+
+--
+-- Constraints for table document_activity
+--
+ALTER TABLE document_activity
+  ADD CONSTRAINT document_activity_ibfk_1 FOREIGN KEY (document_id) REFERENCES document (id),
+  ADD CONSTRAINT document_activity_ibfk_2 FOREIGN KEY (user_id) REFERENCES user (id);
+
+--
+-- Constraints for table login_log
+--
+ALTER TABLE login_log
+  ADD CONSTRAINT login_log_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id),
+  ADD CONSTRAINT login_log_ibfk_2 FOREIGN KEY (admin_id) REFERENCES admin (id);
+
+--
+-- Constraints for table notification
+--
+ALTER TABLE notification
+  ADD CONSTRAINT notification_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id);
+
+--
+-- Constraints for table user_role
+--
+ALTER TABLE user_role
+  ADD CONSTRAINT user_role_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id),
+  ADD CONSTRAINT user_role_ibfk_2 FOREIGN KEY (role_id) REFERENCES role (id);
+COMMIT;
+
+
+--insert default admin credintials
+
+-- Insert default admin credentials
+INSERT INTO `admin` (`id`, `username`, `password_hash`) VALUES
+(2, 'admin', 'scrypt:32768:8:1$Q2P3gtUtj8TvCOOH$f55f74c5f927480cc6087678cbc35a3fe98f636fffdd183e3ce152e97378be9a18c60f2eccb940535982d5bf2b7fb0e9a10e13aebefbf828dd1c6cfe7ba31bea');
+
+-- Insert AdminUploader as system uploader account
+INSERT INTO `user` (`username`, `email`, `created_at`, `is_admin_upload_account`) 
+VALUES ('AdminUploader', 'admin@local', NOW(), 1);
+
+--Alter for the HMAC
+
+ALTER TABLE document ADD COLUMN hmac VARCHAR(64) NOT NULL;
+
+--table of Signs
+CREATE TABLE user_keys (
+    user_id INT PRIMARY KEY,
+    public_key TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+
+--Alter for Digi Sign
+ALTER TABLE document
+ADD COLUMN is_signed BOOLEAN DEFAULT FALSE,
+ADD COLUMN signature LONGBLOB,
+ADD COLUMN signer_type VARCHAR(10);
+
+
+--AdminKey
+
+CREATE TABLE `admin_keys` (
+  `admin_id` int(11) NOT NULL,
+  `public_key` text NOT NULL,
+  PRIMARY KEY (`admin_id`),
+  CONSTRAINT `admin_keys_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+

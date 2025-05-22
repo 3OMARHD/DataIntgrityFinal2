@@ -1,0 +1,321 @@
+
+
+/* Reset default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #6b48ff 0%, #00ddeb 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: auto;
+    padding: 40px 0; /* Adds space at the top and bottom of the page */
+}
+
+/* Container */
+.container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 60px; /* Increased padding for a more spacious form */
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 600px; /* Increased max-width for a wider form */
+    width: 90%;
+    animation: fadeIn 0.8s ease-out;
+    margin: 20px 0; /* Adds space above and below the container */
+}
+
+/* Form Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Heading */
+h1 {
+    color: #2c3e50;
+    font-size: 2.8rem;
+    font-weight: 600;
+    margin-bottom: 25px;
+    position: relative;
+}
+
+h1::after {
+    content: '';
+    display: block;
+    width: 50px;
+    height: 4px;
+    background: #ff6f61;
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Paragraph */
+p {
+    color: #7f8c8d;
+    font-size: 1.3rem;
+    font-weight: 300;
+    margin-bottom: 40px;
+    line-height: 1.6;
+}
+
+/* Button */
+.button {
+    display: inline-block;
+    padding: 14px 28px;
+    background: #ff6f61;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 111, 97, 0.4);
+}
+
+.button:hover {
+    background: #e65b50;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 111, 97, 0.6);
+}
+
+.button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(255, 111, 97, 0.3);
+}
+
+/* Flash Message */
+.flash-message {
+    position: relative;
+    padding: 15px 40px 15px 20px;
+    margin-bottom: 25px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 400;
+    text-align: left;
+    opacity: 0;
+    animation: slideIn 0.5s ease forwards;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.flash-success {
+    background: #e6ffed;
+    color: #28a745;
+    border-left: 5px solid #28a745;
+}
+
+.flash-danger {
+    background: #ffe6e6;
+    color: #dc3545;
+    border-left: 5px solid #dc3545;
+}
+
+.flash-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.flash-close:hover {
+    color: #333;
+}
+
+/* Form Styles */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* Increased gap between fields */
+    margin-bottom: 30px; /* Slightly more space between form and submit button */
+}
+
+/* Form Labels */
+form label {
+    display: block;
+    text-align: left;
+    color: #2c3e50;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* Form Inputs */
+form input[type="email"],
+form input[type="password"],
+form input[type="text"] {
+    width: 100%;
+    padding: 14px 16px; /* Increased padding for larger input fields */
+    border: 2px solid #dfe6e9;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-family: 'Poppins', sans-serif;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+form input[type="email"]:focus,
+form input[type="password"]:focus,
+form input[type="text"]:focus {
+    border-color: #ff6f61;
+    box-shadow: 0 0 0 3px rgba(255, 111, 97, 0.1);
+    outline: none;
+}
+
+/* Checkbox */
+form input[type="checkbox"] {
+    margin-right: 10px;
+    accent-color: #ff6f61;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+}
+
+form input[type="checkbox"] + label {
+    display: inline;
+    font-weight: 400;
+    color: #7f8c8d;
+    font-size: 1rem;
+    vertical-align: middle;
+}
+
+/* Submit Button */
+form button[type="submit"] {
+    padding: 14px 32px;
+    background: #ff6f61;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 111, 97, 0.4);
+}
+
+form button[type="submit"]:hover {
+    background: #e65b50;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 111, 97, 0.6);
+}
+
+form button[type="submit"]:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(255, 111, 97, 0.3);
+}
+
+/* Links */
+p a {
+    color: #ff6f61;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+p a:hover {
+    color: #e65b50;
+    text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .container {
+        padding: 40px;
+    }
+
+    h1 {
+        font-size: 2.4rem;
+    }
+
+    p {
+        font-size: 1.2rem;
+    }
+
+    .button {
+        padding: 14px 28px;
+        font-size: 1.1rem;
+    }
+
+    .flash-message {
+        font-size: 1rem;
+        padding: 14px 30px 14px 18px;
+    }
+
+    form input[type="email"],
+    form input[type="password"],
+    form input[type="text"] {
+        padding: 12px 14px;
+        font-size: 1.1rem;
+    }
+
+    form button[type="submit"] {
+        padding: 16px 34px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .container {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    p {
+        font-size: 1.1rem;
+    }
+
+    form label {
+        font-size: 1rem;
+    }
+}
+.btn-secondary {
+    background-color: #24292e;
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+}
+
+.btn-secondary:hover {
+    background-color: #1b1f23;
+    color: #ffffff;
+}
+
+.dashboard-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+

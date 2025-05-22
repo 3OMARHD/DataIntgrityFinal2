@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - Documents</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+    <h2>All Documents</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th><th>User ID</th><th>Username</th> <!-- NEW --><th>Filename</th><th>Size (KB)</th><th>Status</th><th>Created</th><th>Actions</th><th><strong>Signature</strong></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr>
+                <td>{{ doc.id }}</td>
+                <td>{{ doc.user_id }}</td>
+                <td>{{ doc.user.username }}
+            {% if doc.user.username == 'AdminUploader' %}
+          <span class="badge bg-warning text-dark ms-2">Admin</span>
+               {% endif %}
+               </td>
+                <td>{{ doc.filename }}</td>
+                <td>{{ (doc.file_size / 1024) | round(2) }}</td>
+                <td>{{ doc.encryption_status }}</td>
+                <td>
+    {% if doc.is_signed %}
+        {% if doc.signer_type == 'admin' %}
+            <span class="badge bg-warning text-dark">Admin</span>
+        {% elif doc.signer_type == 'user' %}
+            <span class="badge bg-success">User</span>
+        {% else %}
+            <span class="badge bg-info">Signed</span>
+        {% endif %}
+    {% else %}
+        <span class="badge bg-secondary">Unsigned</span>
+    {% endif %}
+</td>
+                <td>{{ doc.created_at.strftime('%Y-%m-%d') }}</td>
+                <td class="d-flex gap-2">
+    <a href="{{ url_for('admin_view_document', doc_id=doc.id) }}" class="btn btn-sm btn-info">
+        View
+    </a>
+    <a href="{{ url_for('admin_edit_document', doc_id=doc.id) }}" class="btn btn-sm btn-warning">
+        Edit
+    </a>
+    <a href="{{ url_for('admin_download_document', document_id=doc.id) }}" class="btn btn-sm btn-success">
+        Download
+    </a>
+    <form method="POST" action="{{ url_for('admin_delete_document', doc_id=doc.id) }}" onsubmit="return confirm('Delete this document?');">
+        <button class="btn btn-sm btn-danger">Delete</button>
+    </form>
+</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('admin_home') }}" class="btn btn-secondary">Back</a>
+</div>
+</body>
+</html>

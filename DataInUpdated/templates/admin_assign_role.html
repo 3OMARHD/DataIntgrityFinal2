@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2>Assign Role to {{ user.username }}</h2>
+    <form method="POST" class="mb-4">
+        <div class="mb-3">
+            <label for="role_id" class="form-label">Select Role</label>
+            <select class="form-select" id="role_id" name="role_id" required>
+                {% for role in roles %}
+                <option value="{{ role.id }}" {% if role.id in current_roles %}selected{% endif %}>{{ role.role_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Assign Role</button>
+    </form>
+    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Back to Users</a>
+</div>
+{% endblock %}

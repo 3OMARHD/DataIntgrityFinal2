@@ -1,0 +1,769 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Logs{% endblock %}
+
+{% block content %}
+<style>
+    .card { transition: transform 0.2s, box-shadow 0.2s; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); cursor: pointer; }
+    .gradient-primary { background: linear-gradient(45deg, #007bff, #00c4ff); }
+    .gradient-success { background: linear-gradient(45deg, #28a745, #34c759); }
+    .gradient-danger { background: linear-gradient(45deg, #dc3545, #ff4d4d); }
+    .gradient-warning { background: linear-gradient(45deg, #ffc107, #ffda6a); }
+    .table-responsive { max-height: 400px; overflow-y: auto; }
+    .collapsible-header { cursor: pointer; background: #f8f9fa; padding: 10px; border-radius: 5px; }
+    .collapsible-header:hover { background: #e9ecef; }
+    .chart-card { cursor: pointer; }
+    .modal-content { background-color: #fff; }
+    .modal-body canvas { width: 100% !important; height: auto !important; }
+    .auto-refresh-btn { margin-left: 10px; }
+</style>
+
+<div class="container py-4" id="logsContent">
+    <h1 class="text-center mb-4"><i class="fas fa-clipboard-list me-2"></i>Admin Logs</h1>
+
+    <!-- Toast Notification -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="exportToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_users') }}" class="text-decoration-none">
+                <div class="card text-white shadow-sm gradient-primary">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="fas fa-users fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">Total Users</h5>
+                            <p class="card-text h3 mb-0">{{ total_users | default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_documents') }}" class="text-decoration-none">
+                <div class="card text-white shadow-sm gradient-success">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="fas fa-file-alt fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">Total Documents</h5>
+                            <p class="card-text h3 mb-0">{{ total_documents | default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_notifications') }}" class="text-decoration-none">
+                <div class="card text-white shadow-sm gradient-danger">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="fas fa-exclamation-circle fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">Failed Logins Today</h5>
+                            <p class="card-text h3 mb-0">{{ failed_logins_today | default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('admin_users') }}?active=24h" class="text-decoration-none">
+                <div class="card text-white shadow-sm gradient-warning">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="fas fa-user-check fa-2x me-3"></i>
+                        <div>
+                            <h5 class="card-title mb-0">Active Users (24h)</h5>
+                            <p class="card-text h3 mb-0">{{ active_users | default(0) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <!-- Documents per User Chart -->
+        <div class="col-md-3">
+            <div class="card shadow-sm chart-card" data-bs-toggle="modal" data-bs-target="#documentChartModal">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-bar me-2"></i>Documents per User</h5>
+                    {% if chart_data.labels and chart_data.data %}
+                        <canvas id="documentChart" style="max-height: 250px;"></canvas>
+                    {% else %}
+                        <p class="text-muted text-center">No data available for Documents per User.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- File Types Distribution Chart -->
+        <div class="col-md-3">
+            <div class="card shadow-sm chart-card" data-bs-toggle="modal" data-bs-target="#fileTypesChartModal">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>File Types Distribution</h5>
+                    {% if file_types_data.labels %}
+                        <canvas id="fileTypesChart" style="max-height: 250px;"></canvas>
+                    {% else %}
+                        <p class="text-muted text-center">No data available for File Types.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Login Attempts Over Time -->
+        <div class="col-md-3">
+            <div class="card shadow-sm chart-card" data-bs-toggle="modal" data-bs-target="#loginAttemptsChartModal">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>Login Attempts (Last 7 Days)</h5>
+                    {% if login_attempts_data.labels %}
+                        <canvas id="loginAttemptsChart" style="max-height: 250px;"></canvas>
+                    {% else %}
+                        <p class="text-muted text-center">No data available for Login Attempts.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Activity Types Distribution Chart -->
+        <div class="col-md-3">
+            <div class="card shadow-sm chart-card" data-bs-toggle="modal" data-bs-target="#activityTypesChartModal">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Activity Types Distribution</h5>
+                    {% if activity_types_data.labels %}
+                        <canvas id="activityTypesChart" style="max-height: 250px;"></canvas>
+                    {% else %}
+                        <p class="text-muted text-center">No data available for Activity Types.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals for Charts -->
+    <div class="modal fade" id="documentChartModal" tabindex="-1" aria-labelledby="documentChartModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="documentChartModalLabel">Documents per User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="documentChartLarge"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="fileTypesChartModal" tabindex="-1" aria-labelledby="fileTypesChartModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="fileTypesChartModalLabel">File Types Distribution</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="fileTypesChartLarge"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="loginAttemptsChartModal" tabindex="-1" aria-labelledby="loginAttemptsChartModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginAttemptsChartModalLabel">Login Attempts (Last 7 Days)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="loginAttemptsChartLarge"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="activityTypesChartModal" tabindex="-1" aria-labelledby="activityTypesChartModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="activityTypesChartModalLabel">Activity Types Distribution</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="activityTypesChartLarge"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filter Logs</h5>
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control" placeholder="Search logs..." value="{{ search_query | default('') }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from | default('') }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to | default('') }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="activity_type" class="form-control">
+                        <option value="">All Activity Types</option>
+                        <option value="Uploaded" {% if activity_type == 'Uploaded' %}selected{% endif %}>Uploaded</option>
+                        <option value="Downloaded" {% if activity_type == 'Downloaded' %}selected{% endif %}>Downloaded</option>
+                        <option value="Deleted" {% if activity_type == 'Deleted' %}selected{% endif %}>Deleted</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="login_status" class="form-control">
+                        <option value="">All Login Statuses</option>
+                        <option value="Success" {% if request.args.get('login_status') == 'Success' %}selected{% endif %}>Success</option>
+                        <option value="Failed" {% if request.args.get('login_status') == 'Failed' %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Login Logs -->
+    <div class="card mb-4 shadow-sm">
+        <div class="collapsible-header d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#loginLogsCollapse">
+            <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Login Logs</h5>
+            <button id="autoRefreshBtn" class="btn btn-sm btn-info auto-refresh-btn" onclick="toggleAutoRefresh()">Auto-Refresh: Off</button>
+        </div>
+        <div id="loginLogsCollapse" class="collapse show">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>User</th>
+                                <th>Admin</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>IP Address</th>
+                                <th>Country</th>
+                                <th>Timestamp</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if login_logs %}
+                                {% for log, user_name, user_id in login_logs %}
+                                <tr>
+                                    <td>{{ log.id }}</td>
+                                    <td>
+                                        {% if user_name and log.user_id %}
+                                           <a href="{{ url_for('user_activity', user_id=log.user_id) }}">{{ user_name }}</a>
+                                        {% else %}
+                                            {{ user_name | default('N/A') }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ 'Admin' if log.role == 'admin' else 'N/A' }}</td>
+                                    <td>{{ log.email | default('N/A') }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if log.status == 'Success' else 'bg-danger' }}">
+                                            {{ log.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ log.ip_address | default('N/A') }}</td>
+                                    <td>{{ log.country | default('Unknown') }}</td>
+                                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</td>
+                                    <td>
+                                        {% if log.session_duration %}
+                                            {{ (log.session_duration // 60) }}m {{ (log.session_duration % 60) }}s
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="9" class="text-center">No login logs found.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                {% if login_logs_paginated %}
+                <nav aria-label="Login Logs Pagination">
+                    <ul class="pagination justify-content-center mt-3">
+                        {% if login_logs_paginated.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=login_logs_paginated.prev_num, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type, login_status=request.args.get('login_status')) }}">Previous</a>
+                        </li>
+                        {% endif %}
+                        {% for p in login_logs_paginated.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=3) %}
+                            {% if p %}
+                                <li class="page-item {{ 'active' if p == login_logs_paginated.page else '' }}">
+                                    <a class="page-link" href="{{ url_for('admin_logs', page=p, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type, login_status=request.args.get('login_status')) }}">{{ p }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if login_logs_paginated.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=login_logs_paginated.next_num, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type, login_status=request.args.get('login_status')) }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                <a href="{{ url_for('export_logs', log_type='login') }}" class="btn btn-success mt-2" onclick="showToast('Login logs exported as CSV!')">
+                    <i class="fas fa-download me-1"></i>Export as CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Activity Logs -->
+    <div class="card mb-4 shadow-sm">
+        <div class="collapsible-header" data-bs-toggle="collapse" data-bs-target="#activityLogsCollapse">
+            <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Document Activity Logs</h5>
+        </div>
+        <div id="activityLogsCollapse" class="collapse show">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+    <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Document ID</th>
+        <th>Document Name</th>
+        <th>Action</th>
+        <th>Signed</th> <!-- Add this -->
+        <th>IP Address</th>
+        <th>Timestamp</th>
+    </tr>
+</thead>
+
+                       <tbody>
+    {% if activity_logs %}
+        {% for activity, username, user_id, filename, is_signed in activity_logs %}
+        <tr>
+            <td>{{ activity.id }}</td>
+            <td>
+                {% if username and user_id %}
+                    <a href="{{ url_for('user_activity', user_id=user_id) }}">{{ username }}</a>
+                {% else %}
+                    {{ username | default('N/A') }}
+                {% endif %}
+            </td>
+            <td>{{ activity.document_id | default('N/A') }}</td>
+            <td>{{ filename | default('N/A') }}</td>
+            <td>{{ activity.action | default('N/A') }}</td>
+            <td>
+                {% if is_signed %}
+                    ✅ Signed
+                {% else %}
+                    ❌ Not Signed
+                {% endif %}
+            </td>
+            <td>{{ activity.ip_address | default('N/A') }}</td>
+            <td>{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') if activity.timestamp else 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <tr><td colspan="8" class="text-center">No document activity logs found.</td></tr>
+    {% endif %}
+</tbody>
+
+                    </table>
+                </div>
+                <!-- Pagination -->
+                {% if activity_logs_paginated %}
+                <nav aria-label="Document Activity Logs Pagination">
+                    <ul class="pagination justify-content-center mt-3">
+                        {% if activity_logs_paginated.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=activity_logs_paginated.prev_num, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type) }}">Previous</a>
+                        </li>
+                        {% endif %}
+                        {% for p in activity_logs_paginated.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=3) %}
+                            {% if p %}
+                                <li class="page-item {{ 'active' if p == activity_logs_paginated.page else '' }}">
+                                    <a class="page-link" href="{{ url_for('admin_logs', page=p, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type) }}">{{ p }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if activity_logs_paginated.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=activity_logs_paginated.next_num, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type) }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                <a href="{{ url_for('export_logs', log_type='user_activity') }}" class="btn btn-success mt-2" onclick="showToast('Document activity logs exported as CSV!')">
+                    <i class="fas fa-download me-1"></i>Export as CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Activity Logs -->
+    <div class="card mb-4 shadow-sm">
+        <div class="collapsible-header" data-bs-toggle="collapse" data-bs-target="#adminLogsCollapse">
+            <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Admin Activity Logs</h5>
+        </div>
+        <div id="adminLogsCollapse" class="collapse show">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Admin Username</th>
+                                <th>Action</th>
+                                <th>IP Address</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if admin_activities %}
+                                {% for activity, username in admin_activities %}
+                                <tr>
+                                    <td>{{ activity.id }}</td>
+                                    <td>{{ username | default('N/A') }}</td>
+                                    <td>{{ activity.action | default('N/A') }}</td>
+                                    <td>{{ activity.ip_address | default('N/A') }}</td>
+                                    <td>{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') if activity.timestamp else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="text-center">No admin activity logs found.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                {% if admin_activities_paginated %}
+                <nav aria-label="Admin Activity Logs Pagination">
+                    <ul class="pagination justify-content-center mt-3">
+                        {% if admin_activities_paginated.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=admin_activities_paginated.prev_num, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type) }}">Previous</a>
+                        </li>
+                        {% endif %}
+                        {% for p in admin_activities_paginated.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=3) %}
+                            {% if p %}
+                                <li class="page-item {{ 'active' if p == admin_activities_paginated.page else '' }}">
+                                    <a class="page-link" href="{{ url_for('admin_logs', page=p, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type) }}">{{ p }}</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if admin_activities_paginated.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin_logs', page=admin_activities_paginated.next_num, search=search_query, date_from=date_from, date_to=date_to, activity_type=activity_type) }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                <a href="{{ url_for('export_logs', log_type='admin_activity') }}" class="btn btn-success mt-2" onclick="showToast('Admin activity logs exported as CSV!')">
+                    <i class="fas fa-download me-1"></i>Export as CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export PDF Button -->
+    <div class="text-center mb-4">
+        <button id="exportPdfBtn" class="btn btn-primary">
+            <i class="fas fa-file-pdf me-1"></i>Export All Logs as PDF
+            <span class="spinner-border spinner-border-sm d-none" id="pdfSpinner" role="status" aria-hidden="true"></span>
+        </button>
+    </div>
+</div>
+
+<!-- JavaScript for Charts, PDF Export, and Auto-Refresh -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<script>
+// Toast Notification Function
+function showToast(message, isError = false) {
+    const toast = new bootstrap.Toast(document.getElementById('exportToast'));
+    const toastBody = document.querySelector('#exportToast .toast-body');
+    toastBody.textContent = message;
+    toastBody.className = 'toast-body ' + (isError ? 'text-danger' : 'text-success');
+    toast.show();
+}
+
+// Auto-Refresh Logic
+let autoRefreshInterval = null;
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    if (!autoRefreshInterval) {
+        autoRefreshInterval = setInterval(() => {
+            location.reload();
+        }, 300000); // Refresh every 5 minutes (300,000 ms)
+        btn.textContent = 'Auto-Refresh: On';
+        btn.classList.remove('btn-info');
+        btn.classList.add('btn-warning');
+        showToast('Auto-refresh enabled (every 5 minutes).');
+    } else {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        btn.textContent = 'Auto-Refresh: Off';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-info');
+        showToast('Auto-refresh disabled.');
+    }
+}
+
+// Chart Configurations
+const chartConfigs = {
+    documentChart: {
+        type: 'bar',
+        data: {
+            labels: {{ chart_data.labels | tojson | safe }},
+            datasets: [{
+                label: 'Documents per User',
+                data: {{ chart_data.data | tojson | safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Number of Documents' } },
+                x: { title: { display: true, text: 'Users' } }
+            }
+        }
+    },
+    fileTypesChart: {
+        type: 'pie',
+        data: {
+            labels: {{ file_types_data.labels | tojson | safe }},
+            datasets: [{
+                label: 'File Types',
+                data: {{ file_types_data.data | tojson | safe }},
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    },
+    loginAttemptsChart: {
+        type: 'line',
+        data: {
+            labels: {{ login_attempts_data.labels | tojson | safe }},
+            datasets: [{
+                label: 'Login Attempts',
+                data: {{ login_attempts_data.data | tojson | safe }},
+                fill: false,
+                borderColor: '#4BC0C0',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Attempts' } },
+                x: { title: { display: true, text: 'Date' } }
+            }
+        }
+    },
+    activityTypesChart: {
+        type: 'pie',
+        data: {
+            labels: {{ activity_types_data.labels | tojson | safe }},
+            datasets: [{
+                label: 'Activity Types',
+                data: {{ activity_types_data.data | tojson | safe }},
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    }
+};
+
+// Initialize Charts
+{% if chart_data and chart_data.labels and chart_data.data %}
+const documentChartCtx = document.getElementById('documentChart').getContext('2d');
+const documentChart = new Chart(documentChartCtx, chartConfigs.documentChart);
+const documentChartLargeCtx = document.getElementById('documentChartLarge').getContext('2d');
+const documentChartLarge = new Chart(documentChartLargeCtx, chartConfigs.documentChart);
+{% endif %}
+
+{% if file_types_data and file_types_data.labels %}
+const fileTypesChartCtx = document.getElementById('fileTypesChart').getContext('2d');
+const fileTypesChart = new Chart(fileTypesChartCtx, chartConfigs.fileTypesChart);
+const fileTypesChartLargeCtx = document.getElementById('fileTypesChartLarge').getContext('2d');
+const fileTypesChartLarge = new Chart(fileTypesChartLargeCtx, chartConfigs.fileTypesChart);
+{% endif %}
+
+{% if login_attempts_data and login_attempts_data.labels %}
+const loginAttemptsChartCtx = document.getElementById('loginAttemptsChart').getContext('2d');
+const loginAttemptsChart = new Chart(loginAttemptsChartCtx, chartConfigs.loginAttemptsChart);
+const loginAttemptsChartLargeCtx = document.getElementById('loginAttemptsChartLarge').getContext('2d');
+const loginAttemptsChartLarge = new Chart(loginAttemptsChartLargeCtx, chartConfigs.loginAttemptsChart);
+{% endif %}
+
+{% if activity_types_data and activity_types_data.labels %}
+const activityTypesChartCtx = document.getElementById('activityTypesChart').getContext('2d');
+const activityTypesChart = new Chart(activityTypesChartCtx, chartConfigs.activityTypesChart);
+const activityTypesChartLargeCtx = document.getElementById('activityTypesChartLarge').getContext('2d');
+const activityTypesChartLarge = new Chart(activityTypesChartLargeCtx, chartConfigs.activityTypesChart);
+{% endif %}
+
+// PDF Export with Tables
+document.getElementById('exportPdfBtn').addEventListener('click', function() {
+    const exportBtn = this;
+    const spinner = document.getElementById('pdfSpinner');
+    exportBtn.disabled = true;
+    spinner.classList.remove('d-none');
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(16);
+        doc.text('Admin Logs Report', 14, 20);
+        doc.setFontSize(12);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+        // Login Logs Table
+        doc.setFontSize(14);
+        doc.text('Login Logs', 14, 40);
+        const loginLogsData = [
+            ['ID', 'User', 'Admin', 'Email', 'Status', 'IP Address', 'Country', 'Timestamp', 'Duration']
+        ];
+        {% if login_logs %}
+            {% for log, user_name, user_id in login_logs %}
+                loginLogsData.push([
+                    '{{ log.id }}',
+                    '{{ user_name | default('N/A') }}',
+                    '{{ 'Admin' if log.role == 'admin' else 'N/A' }}',
+                    '{{ log.email | default('N/A') }}',
+                    '{{ log.status }}',
+                    '{{ log.ip_address | default('N/A') }}',
+                    '{{ log.country | default('Unknown') }}',
+                    '{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}',
+                    {% if log.session_duration %}
+                        '{{ (log.session_duration // 60) }}m {{ (log.session_duration % 60) }}s'
+                    {% else %}
+                        'N/A'
+                    {% endif %}
+                ]);
+            {% endfor %}
+        {% else %}
+            loginLogsData.push(['No login logs found.', '', '', '', '', '', '', '', '']);
+        {% endif %}
+        doc.autoTable({
+            startY: 45,
+            head: [loginLogsData[0]],
+            body: loginLogsData.slice(1),
+            theme: 'striped',
+            headStyles: { fillColor: [0, 123, 255] },
+            styles: { fontSize: 8 }
+        });
+
+        // Document Activity Logs Table
+        let finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(14);
+        doc.text('Document Activity Logs', 14, finalY);
+        const activityLogsData = [
+            ['ID', 'Username', 'Document ID', 'Document Name', 'Action', 'IP Address', 'Timestamp']
+        ];
+        {% if activity_logs %}
+            {% for activity, username, user_id, filename, is_signed in activity_logs %}
+                activityLogsData.push([
+                    '{{ activity.id }}',
+                    '{{ username | default('N/A') }}',
+                    '{{ activity.document_id | default('N/A') }}',
+                    '{{ filename | default('N/A') }}',
+                    '{{ activity.action | default('N/A') }}',
+                    '{{ activity.ip_address | default('N/A') }}',
+                    '{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') if activity.timestamp else 'N/A' }}'
+                ]);
+            {% endfor %}
+        {% else %}
+            activityLogsData.push(['No document activity logs found.', '', '', '', '', '', '']);
+        {% endif %}
+        doc.autoTable({
+            startY: finalY + 5,
+            head: [activityLogsData[0]],
+            body: activityLogsData.slice(1),
+            theme: 'striped',
+            headStyles: { fillColor: [0, 123, 255] },
+            styles: { fontSize: 8 }
+        });
+
+        // Admin Activity Logs Table
+        finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(14);
+        doc.text('Admin Activity Logs', 14, finalY);
+        const adminLogsData = [
+            ['ID', 'Admin Username', 'Action', 'IP Address', 'Timestamp']
+        ];
+        {% if admin_activities %}
+            {% for activity, username in admin_activities %}
+                adminLogsData.push([
+                    '{{ activity.id }}',
+                    '{{ username | default('N/A') }}',
+                    '{{ activity.action | default('N/A') }}',
+                    '{{ activity.ip_address | default('N/A') }}',
+                    '{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') if activity.timestamp else 'N/A' }}'
+                ]);
+            {% endfor %}
+        {% else %}
+            adminLogsData.push(['No admin activity logs found.', '', '', '', '']);
+        {% endif %}
+        doc.autoTable({
+            startY: finalY + 5,
+            head: [adminLogsData[0]],
+            body: adminLogsData.slice(1),
+            theme: 'striped',
+            headStyles: { fillColor: [0, 123, 255] },
+            styles: { fontSize: 8 }
+        });
+
+        // Save the PDF
+        doc.save('admin_logs.pdf');
+        showToast('PDF exported successfully!');
+    } catch (err) {
+        console.error('PDF Export Error:', err);
+        showToast('Failed to export PDF. Please try again.', true);
+    } finally {
+        exportBtn.disabled = false;
+        spinner.classList.add('d-none');
+    }
+});
+</script>
+{% endblock %}

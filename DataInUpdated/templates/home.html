@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        <span>{{ message }}</span>
+                        <button class="flash-close">×</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <h1>Hello, {{ username }}!</h1>
+        <p>Welcome to the Secure Authentication System</p>
+        <p><a href="{{ url_for('documents_list') }}" class="button">View My Documents</a></p>
+        <p><a href="{{ url_for('upload_document') }}" class="button">Upload Document</a></p>
+        <p><a href="{{ url_for('profile') }}" class="button">Edit Profile</a></p>
+        <p><a href="{{ url_for('logout') }}" class="button">Logout</a></p>
+    </div>
+    <script>
+        document.querySelectorAll('.flash-close').forEach(button => {
+            button.addEventListener('click', () => {
+                button.parentElement.style.opacity = '0';
+                setTimeout(() => {
+                    button.parentElement.remove();
+                }, 300);
+            });
+        });
+    </script>
+</body>
+</html>

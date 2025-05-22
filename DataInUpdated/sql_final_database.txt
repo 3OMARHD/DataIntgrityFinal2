@@ -1,0 +1,76 @@
+-- Create database (if needed)
+CREATE DATABASE IF NOT EXISTS `secure_auth_db1` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `secure_auth_db1`;
+
+-- Table: admin
+CREATE TABLE `admin` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(50) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(512) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: user
+CREATE TABLE `user` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(150) NOT NULL UNIQUE,
+  `email` VARCHAR(150) NOT NULL UNIQUE,
+  `password` VARCHAR(150) DEFAULT NULL,
+  `auth_method` VARCHAR(20) DEFAULT NULL,
+  `github_id` VARCHAR(200) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+  `two_factor_secret` VARCHAR(100) DEFAULT NULL,
+  `is_2fa_enabled` TINYINT(1) DEFAULT 0,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Add column after creating the user table
+ALTER TABLE `user` ADD COLUMN `is_admin_upload_account` TINYINT(1) DEFAULT 0;
+
+-- Table: document
+CREATE TABLE `document` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL,
+  `filename` VARCHAR(255) NOT NULL,
+  `file_hash` VARCHAR(64) NOT NULL,
+  `encrypted_data` LONGBLOB NOT NULL,
+  `file_size` INT(11) NOT NULL,
+  `encryption_status` VARCHAR(20) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+  `aes_key` VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `document_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: document_activity
+CREATE TABLE `document_activity` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `document_id` INT(11) NOT NULL,
+  `user_id` INT(11) NOT NULL,
+  `action` VARCHAR(50) NOT NULL,
+  `ip_address` VARCHAR(100) DEFAULT NULL,
+  `timestamp` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `document_id` (`document_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `document_activity_ibfk_1` FOREIGN KEY (`document_id`) REFERENCES `document` (`id`),
+  CONSTRAINT `document_activity_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table: login_log
+CREATE TABLE `login_log` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) DEFAULT NULL,
+  `ip_address` VARCHAR(100) DEFAULT NULL,
+  `timestamp` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Insert default admin credentials
+INSERT INTO `admin` (`id`, `username`, `password_hash`) VALUES
+(2, 'admin', 'scrypt:32768:8:1$Q2P3gtUtj8TvCOOH$f55f74c5f927480cc6087678cbc35a3fe98f636fffdd183e3ce152e97378be9a18c60f2eccb940535982d5bf2b7fb0e9a10e13aebefbf828dd1c6cfe7ba31bea');
+
+-- Insert AdminUploader as system uploader account
+INSERT INTO `user` (`username`, `email`, `created_at`, `is_admin_upload_account`) 
+VALUES ('AdminUploader', 'admin@local', NOW(), 1);

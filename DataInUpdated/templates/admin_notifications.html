@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Notifications{% endblock %}
+
+{% block content %}
+<style>
+    .notification-unread { background-color: #ffe6e6; }
+    .table-responsive { margin-top: 20px; }
+</style>
+
+<div class="container py-4">
+    <h1 class="text-center mb-4"><i class="fas fa-bell me-2"></i>Admin Notifications</h1>
+    
+    <!-- جدول التنبيهات -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-exclamation-circle me-2"></i>System Notifications</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Message</th>
+                            <th>User</th>
+                            <th>IP Address</th>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if notifications is defined and notifications %}
+                            {% for notification in notifications %}
+                            <tr class="{% if not notification.is_read %}notification-unread{% endif %}">
+                                <td>{{ notification.id }}</td>
+                                <td>{{ notification.type }}</td>
+                                <td>{{ notification.message }}</td>
+                                <td>{{ notification.user.username if notification.user else 'N/A' }}</td>
+                                <td>{{ notification.ip_address }}</td>
+                                <td>{{ notification.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if not notification.is_read %}
+                                    <form action="{{ url_for('mark_notification_read', notification_id=notification.id) }}" method="POST">
+                                        <button type="submit" class="btn btn-sm btn-primary">Mark as Read</button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-muted">Read</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="7" class="text-center">No notifications found.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- تنبيهات محاولات تسجيل الدخول الفاشلة -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Failed Logins (Last 24 Hours)</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Email</th>
+                            <th>IP Address</th>
+                            <th>Country</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if failed_logins is defined and failed_logins %}
+                            {% for log in failed_logins %}
+                            <tr>
+                                <td>{{ log.email }}</td>
+                                <td>{{ log.ip_address }}</td>
+                                <td>{{ log.country or 'Unknown' }}</td>
+                                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="text-center">No failed logins found.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- تنبيهات الأنشطة الحرجة -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-user-shield me-2"></i>Critical Admin Actions (Last 24 Hours)</h5>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>IP Address</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if critical_actions is defined and critical_actions %}
+                            {% for activity in critical_actions %}
+                            <tr>
+                                <td>{{ activity.admin.username }}</td>
+                                <td>{{ activity.action }}</td>
+                                <td>{{ activity.ip_address }}</td>
+                                <td>{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" class="text-center">No critical actions found.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
