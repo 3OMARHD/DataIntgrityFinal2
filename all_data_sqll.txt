@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 21, 2025 at 05:53 PM
+-- Generation Time: May 22, 2025 at 06:48 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -46,6 +46,17 @@ CREATE TABLE admin_activity (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table admin_keys
+--
+
+CREATE TABLE admin_keys (
+  admin_id int(11) NOT NULL,
+  public_key text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table document
 --
 
@@ -58,7 +69,11 @@ CREATE TABLE document (
   file_size int(11) NOT NULL,
   encryption_status varchar(20) DEFAULT NULL,
   created_at datetime DEFAULT NULL,
-  aes_key varchar(255) DEFAULT NULL
+  aes_key varchar(255) DEFAULT NULL,
+  hmac varchar(64) NOT NULL,
+  is_signed tinyint(1) DEFAULT 0,
+  signature longblob DEFAULT NULL,
+  signer_type varchar(10) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -146,6 +161,17 @@ CREATE TABLE user (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table user_keys
+--
+
+CREATE TABLE user_keys (
+  user_id int(11) NOT NULL,
+  public_key text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table user_role
 --
 
@@ -172,6 +198,12 @@ ALTER TABLE admin
 ALTER TABLE admin_activity
   ADD PRIMARY KEY (id),
   ADD KEY admin_id (admin_id);
+
+--
+-- Indexes for table admin_keys
+--
+ALTER TABLE admin_keys
+  ADD PRIMARY KEY (admin_id);
 
 --
 -- Indexes for table document
@@ -217,6 +249,12 @@ ALTER TABLE user
   ADD PRIMARY KEY (id),
   ADD UNIQUE KEY username (username),
   ADD UNIQUE KEY email (email);
+
+--
+-- Indexes for table user_keys
+--
+ALTER TABLE user_keys
+  ADD PRIMARY KEY (user_id);
 
 --
 -- Indexes for table user_role
@@ -295,6 +333,12 @@ ALTER TABLE admin_activity
   ADD CONSTRAINT admin_activity_ibfk_1 FOREIGN KEY (admin_id) REFERENCES admin (id);
 
 --
+-- Constraints for table admin_keys
+--
+ALTER TABLE admin_keys
+  ADD CONSTRAINT admin_keys_ibfk_1 FOREIGN KEY (admin_id) REFERENCES admin (id) ON DELETE CASCADE;
+
+--
 -- Constraints for table document
 --
 ALTER TABLE document
@@ -321,15 +365,18 @@ ALTER TABLE notification
   ADD CONSTRAINT notification_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id);
 
 --
+-- Constraints for table user_keys
+--
+ALTER TABLE user_keys
+  ADD CONSTRAINT user_keys_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE;
+
+--
 -- Constraints for table user_role
 --
 ALTER TABLE user_role
   ADD CONSTRAINT user_role_ibfk_1 FOREIGN KEY (user_id) REFERENCES user (id),
   ADD CONSTRAINT user_role_ibfk_2 FOREIGN KEY (role_id) REFERENCES role (id);
 COMMIT;
-
-
---insert default admin credintials
 
 -- Insert default admin credentials
 INSERT INTO `admin` (`id`, `username`, `password_hash`) VALUES
@@ -338,32 +385,3 @@ INSERT INTO `admin` (`id`, `username`, `password_hash`) VALUES
 -- Insert AdminUploader as system uploader account
 INSERT INTO `user` (`username`, `email`, `created_at`, `is_admin_upload_account`) 
 VALUES ('AdminUploader', 'admin@local', NOW(), 1);
-
---Alter for the HMAC
-
-ALTER TABLE document ADD COLUMN hmac VARCHAR(64) NOT NULL;
-
---table of Signs
-CREATE TABLE user_keys (
-    user_id INT PRIMARY KEY,
-    public_key TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
-);
-
-
---Alter for Digi Sign
-ALTER TABLE document
-ADD COLUMN is_signed BOOLEAN DEFAULT FALSE,
-ADD COLUMN signature LONGBLOB,
-ADD COLUMN signer_type VARCHAR(10);
-
-
---AdminKey
-
-CREATE TABLE `admin_keys` (
-  `admin_id` int(11) NOT NULL,
-  `public_key` text NOT NULL,
-  PRIMARY KEY (`admin_id`),
-  CONSTRAINT `admin_keys_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `admin` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
